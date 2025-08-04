@@ -11,9 +11,11 @@ import {
   collection,
   getDoc,
 } from "firebase/firestore";
+import AgoraRTC from "agora-rtc-sdk-ng";
 
-const PLAYBACK_URL =
-  "https://aedbe23c3ab7.us-east-1.playback.live-video.net/api/video/v1/us-east-1.991046441176.channel.vwzbgNVljgch.m3u8";
+const APP_ID = "659ca74bd1ef43f8bd76eee364741b32";
+const CHANNEL = "aquaauctions";
+const TOKEN = null;
 
 export default function Live() {
   const { user, logout } = useAuth();
@@ -26,43 +28,23 @@ export default function Live() {
   const [cardInfo, setCardInfo] = useState("");
 
   useEffect(() => {
-    const setupPlayer = async () => {
-      if (!window.IVSPlayer) {
-        await new Promise((resolve) => {
-          const script = document.createElement("script");
-          script.src =
-            "https://player.live-video.net/1.20.0/amazon-ivs-player.min.js";
-          script.async = true;
-          script.onload = resolve;
-          document.body.appendChild(script);
-        });
-      }
+    const initAgoraPlayer = async () => {
+      const client = AgoraRTC.createClient({ mode: "live", codec: "vp8" });
+      await client.setClientRole("audience");
+      await client.join(APP_ID, CHANNEL, TOKEN || null, null);
 
-      const waitUntilReady = () =>
-        new Promise((resolve) => {
-          const interval = setInterval(() => {
-            if (
-              window.IVSPlayer &&
-              typeof window.IVSPlayer.isPlayerSupported === "function"
-            ) {
-              clearInterval(interval);
-              resolve(window.IVSPlayer);
-            }
-          }, 50);
-        });
-
-      const IVSPlayer = await waitUntilReady();
-      if (!IVSPlayer.isPlayerSupported()) return;
-
-      const player = IVSPlayer.create();
-      player.attachHTMLVideoElement(videoRef.current);
-      player.load(PLAYBACK_URL);
-      player.setAutoplay(true);
-      player.setVolume(1.0);
-      player.play();
+      client.on("user-published", async (user, mediaType) => {
+        await client.subscribe(user, mediaType);
+        if (mediaType === "video") {
+          user.videoTrack.play(videoRef.current);
+        }
+        if (mediaType === "audio") {
+          user.audioTrack.play();
+        }
+      });
     };
 
-    setupPlayer();
+    initAgoraPlayer();
   }, []);
 
   useEffect(() => {
@@ -161,13 +143,10 @@ export default function Live() {
     <div className="flex flex-col items-center justify-center min-h-screen bg-black text-white px-4">
       <h1 className="text-2xl font-bold mb-4">📺 Livestream Viewer</h1>
 
-      <video
+      <div
         ref={videoRef}
-        controls
-        autoPlay
-        playsInline
-        style={{ width: "100%", maxWidth: "800px", borderRadius: "10px" }}
-      />
+        className="w-full max-w-xl h-64 bg-black rounded-lg shadow mb-4"
+      ></div>
 
       <div className="bg-gray-800 p-4 mt-6 rounded w-full max-w-md">
         <h2 className="text-lg font-semibold mb-2">🛍️ Current Auction</h2>
