@@ -1,14 +1,13 @@
 // src/pages/index.js
-
 import { useAuth } from "@/components/AuthProvider";
 
 export default function Home() {
-  const { user, login, logout, loading } = useAuth();
+  const { user, login, logout, loading } = useAuth() || {};
 
   if (loading) return <p className="text-center mt-10">Loading...</p>;
 
   return (
-    <div className="flex flex-col items-center justify-center h-screen bg-gray-100">
+    <div className="flex flex-col items-center justify-center h-screen bg-gray-100 text-black">
       <h1 className="text-3xl font-bold mb-4">Welcome to AquaAuctions</h1>
 
       {!user ? (
@@ -25,18 +24,18 @@ export default function Home() {
         <>
           <p className="mb-4">Welcome, {user.displayName}!</p>
           <div className="space-x-4">
-            <button
-              onClick={() => window.location.href = "/live"}
+            <a
+              href="/live"
               className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
             >
               View Livestream
-            </button>
-            <button
-              onClick={() => window.location.href = "/stream"}
+            </a>
+            <a
+              href="/stream"
               className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"
             >
               Start Streaming
-            </button>
+            </a>
           </div>
           <button
             onClick={logout}
