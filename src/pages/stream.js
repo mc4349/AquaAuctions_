@@ -1,4 +1,4 @@
-// src/pages/stream.js
+// src/pages/stream.js bro this is getting me tight
 
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
