@@ -7,15 +7,13 @@ import {
   doc,
   setDoc,
   updateDoc,
-  getDoc,
   arrayUnion,
 } from "firebase/firestore";
 import ChatBox from "@/components/ChatBox";
-import AgoraRTC from "agora-rtc-sdk-ng";
 
 const APP_ID = "659ca74bd1ef43f8bd76eee364741b32";
 const CHANNEL = "aquaauctions";
-const TOKEN = null; // use a generated token if needed
+const TOKEN = null;
 
 export default function StreamPage() {
   const { user, logout } = useAuth();
@@ -27,8 +25,10 @@ export default function StreamPage() {
   const [productQueue, setProductQueue] = useState([]);
   const clientRef = useRef(null);
   const localTrackRef = useRef(null);
+  const micTrackRef = useRef(null);
 
   const startStream = async () => {
+    const AgoraRTC = (await import("agora-rtc-sdk-ng")).default;
     const client = AgoraRTC.createClient({ mode: "live", codec: "vp8" });
     clientRef.current = client;
 
@@ -36,6 +36,7 @@ export default function StreamPage() {
 
     const [microphoneTrack, cameraTrack] = await AgoraRTC.createMicrophoneAndCameraTracks();
 
+    micTrackRef.current = microphoneTrack;
     localTrackRef.current = cameraTrack;
 
     cameraTrack.play(videoRef.current);
@@ -43,9 +44,7 @@ export default function StreamPage() {
 
     setIsStreaming(true);
 
-    // Save initial stream data to Firestore
-    const streamDocRef = doc(db, "Livestreams", "testStream");
-    await setDoc(streamDocRef, {
+    await setDoc(doc(db, "Livestreams", "testStream"), {
       streamerId: user.uid,
       streamerName: user.displayName,
       isLive: true,
@@ -58,6 +57,11 @@ export default function StreamPage() {
     if (localTrackRef.current) {
       localTrackRef.current.stop();
       localTrackRef.current.close();
+    }
+
+    if (micTrackRef.current) {
+      micTrackRef.current.stop();
+      micTrackRef.current.close();
     }
 
     if (clientRef.current) {
@@ -82,8 +86,7 @@ export default function StreamPage() {
 
     setProductQueue((prev) => [...prev, product]);
 
-    const streamDocRef = doc(db, "Livestreams", "testStream");
-    await updateDoc(streamDocRef, {
+    await updateDoc(doc(db, "Livestreams", "testStream"), {
       productQueue: arrayUnion(product),
     });
 
