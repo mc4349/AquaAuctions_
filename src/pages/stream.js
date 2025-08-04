@@ -27,18 +27,35 @@ export default function StreamPage() {
   const [productQueue, setProductQueue] = useState([]);
 
   useEffect(() => {
-    async function startCamera() {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: true,
-        audio: true,
-      });
-      mediaStreamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
+    async function startCameraAndInit() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: true,
+        });
+        mediaStreamRef.current = stream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
+
+        const loadScriptAndStart = () => {
+          if (!window.IVSBroadcastClient) {
+            const script = document.createElement("script");
+            script.src = "https://web-broadcast.live-video.net/1.6.0/amazon-ivs-web-broadcast.js";
+            script.onload = () => initBroadcaster(stream);
+            document.body.appendChild(script);
+          } else {
+            initBroadcaster(stream);
+          }
+        };
+
+        loadScriptAndStart();
+      } catch (err) {
+        console.error("Failed to access camera/mic:", err);
       }
     }
 
-    startCamera();
+    startCameraAndInit();
 
     return () => {
       if (mediaStreamRef.current) {
@@ -47,28 +64,23 @@ export default function StreamPage() {
     };
   }, []);
 
-  const startStream = async () => {
-    if (!window.IVSBroadcastClient) {
-      const script = document.createElement("script");
-      script.src = "https://web-broadcast.live-video.net/1.6.0/amazon-ivs-web-broadcast.js";
-      script.onload = () => initBroadcaster();
-      document.body.appendChild(script);
-    } else {
-      initBroadcaster();
-    }
-  };
-
-  const initBroadcaster = () => {
+  const initBroadcaster = (stream) => {
     const { IVSBroadcastClient } = window;
     const client = IVSBroadcastClient.create({
       streamConfig: IVSBroadcastClient.BASIC_LANDSCAPE,
       ingestEndpoint: INGEST_URL,
     });
 
-    const stream = mediaStreamRef.current;
-    client.addVideoInputDevice(stream);
-    client.addAudioInputDevice(stream);
+    if (!stream) {
+      console.error("No media stream found");
+      return;
+    }
 
+    console.log("Adding devices to broadcast client...");
+    client.addVideoInputDevice(stream, "iPad Camera");
+    client.addAudioInputDevice(stream, "iPad Mic");
+
+    console.log("Starting broadcast...");
     client.startBroadcast(STREAM_KEY);
     setIsStreaming(true);
   };
@@ -131,12 +143,7 @@ export default function StreamPage() {
       />
 
       {!isStreaming ? (
-        <button
-          onClick={startStream}
-          className="mt-4 px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700"
-        >
-          Go Live
-        </button>
+        <p className="mt-4 text-yellow-500">🔄 Connecting to livestream...</p>
       ) : (
         <p className="mt-4 text-green-600 font-semibold">✅ You are live now!</p>
       )}
