@@ -1,24 +1,35 @@
 // src/components/ChatBox.js
 
 import { useEffect, useRef, useState } from "react";
-import { getDatabase, ref, push, onChildAdded } from "firebase/database";
-import { auth } from "@/firebase/firebaseClient";
+import {
+  collection,
+  addDoc,
+  onSnapshot,
+  query,
+  orderBy,
+} from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { useAuth } from "./AuthProvider";
 
-export default function ChatBox() {
+export default function ChatBox({ streamId }) {
+  const { user } = useAuth();
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const chatEndRef = useRef(null);
 
   useEffect(() => {
-    const db = getDatabase();
-    const chatRef = ref(db, "chat");
+    const q = query(
+      collection(db, "Livestreams", streamId, "messages"),
+      orderBy("timestamp")
+    );
 
-    const unsubscribe = onChildAdded(chatRef, (snapshot) => {
-      setMessages((prev) => [...prev, snapshot.val()]);
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const loadedMessages = snapshot.docs.map((doc) => doc.data());
+      setMessages(loadedMessages);
     });
 
-    return () => unsubscribe(); // Clean up listener
-  }, []);
+    return () => unsubscribe();
+  }, [streamId]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -27,11 +38,8 @@ export default function ChatBox() {
   const handleSend = async () => {
     if (!input.trim()) return;
 
-    const db = getDatabase();
-    const chatRef = ref(db, "chat");
-
-    await push(chatRef, {
-      name: auth.currentUser.displayName,
+    await addDoc(collection(db, "Livestreams", streamId, "messages"), {
+      name: user?.displayName || "Anonymous",
       message: input,
       timestamp: Date.now(),
     });
@@ -41,7 +49,7 @@ export default function ChatBox() {
 
   return (
     <div className="w-full max-w-md mt-6">
-      <div className="bg-gray-100 h-64 overflow-y-auto rounded p-3 mb-2">
+      <div className="bg-gray-100 h-64 overflow-y-auto rounded p-3 mb-2 text-black">
         {messages.map((msg, idx) => (
           <p key={idx}><strong>{msg.name}:</strong> {msg.message}</p>
         ))}

@@ -11,7 +11,8 @@ import {
   collection,
   getDoc,
 } from "firebase/firestore";
-import AgoraRTC from "agora-rtc-sdk-ng";
+import ChatBox from "@/components/ChatBox";
+import { toast, Toaster } from "react-hot-toast";
 
 const APP_ID = "659ca74bd1ef43f8bd76eee364741b32";
 const CHANNEL = "aquaauctions";
@@ -27,8 +28,12 @@ export default function Live() {
   const [address, setAddress] = useState("");
   const [cardInfo, setCardInfo] = useState("");
 
+  // Initialize Agora Player
   useEffect(() => {
     const initAgoraPlayer = async () => {
+      if (typeof window === "undefined") return;
+      const AgoraRTC = (await import("agora-rtc-sdk-ng")).default;
+
       const client = AgoraRTC.createClient({ mode: "live", codec: "vp8" });
       await client.setClientRole("audience");
       await client.join(APP_ID, CHANNEL, TOKEN || null, null);
@@ -42,11 +47,16 @@ export default function Live() {
           user.audioTrack.play();
         }
       });
+
+      client.on("user-unpublished", () => {
+        if (videoRef.current) videoRef.current.innerHTML = "";
+      });
     };
 
     initAgoraPlayer();
   }, []);
 
+  // Listen for product updates
   useEffect(() => {
     const streamRef = doc(db, "Livestreams", "testStream");
     const unsubscribe = onSnapshot(streamRef, (snapshot) => {
@@ -66,22 +76,64 @@ export default function Live() {
     return () => unsubscribe();
   }, []);
 
+  // Countdown and auto-advance logic
   useEffect(() => {
     if (!activeProduct?.endsAt) {
       setCountdown(0);
       return;
     }
 
-    const interval = setInterval(() => {
+    const interval = setInterval(async () => {
       const secondsLeft = Math.max(
         0,
         Math.floor((activeProduct.endsAt - Date.now()) / 1000)
       );
       setCountdown(secondsLeft);
+
+      if (secondsLeft === 0 && !showCheckoutPrompt) {
+        setShowCheckoutPrompt(true);
+
+        // Auto-advance to next product
+        setTimeout(async () => {
+          const streamRef = doc(db, "Livestreams", "testStream");
+          const streamSnap = await getDoc(streamRef);
+          const products = streamSnap.data().products;
+
+          const updatedProducts = products.map((p, index) => {
+            if (p.addedAt === activeProduct.addedAt) {
+              return { ...p, isActive: false };
+            }
+
+            const currentIndex = products.findIndex(
+              (p) => p.addedAt === activeProduct.addedAt
+            );
+            const nextIndex = currentIndex + 1;
+
+            if (index === nextIndex) {
+              const endsAt = Date.now() + p.duration * 1000;
+              return { ...p, isActive: true, endsAt };
+            }
+
+            return p;
+          });
+
+          await updateDoc(streamRef, { products: updatedProducts });
+        }, 4000);
+      }
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [activeProduct]);
+  }, [activeProduct, showCheckoutPrompt]);
+
+  // Bidding notification (outbid warning)
+  useEffect(() => {
+    if (
+      activeProduct?.highestBidder &&
+      activeProduct?.highestBidder !== (user?.email || "Anonymous")
+    ) {
+      toast.error("⚠️ You've been outbid!");
+    }
+  }, [activeProduct?.highestBidder]);
 
   const placeBid = async () => {
     const bid = parseFloat(bidAmount);
@@ -90,7 +142,8 @@ export default function Live() {
       return;
     }
 
-    if (bid <= (activeProduct.highestBid || activeProduct.price)) {
+    const currentBid = activeProduct.highestBid || activeProduct.price;
+    if (bid <= currentBid) {
       alert("Bid must be higher than the current highest bid.");
       return;
     }
@@ -102,15 +155,20 @@ export default function Live() {
 
       const updatedProducts = products.map((p) =>
         p.addedAt === activeProduct.addedAt
-          ? { ...p, highestBid: bid, highestBidder: user?.email || "Anonymous" }
+          ? {
+              ...p,
+              highestBid: bid,
+              highestBidder: user?.email || "Anonymous",
+            }
           : p
       );
 
       await updateDoc(streamRef, { products: updatedProducts });
       setBidAmount("");
+      toast.success("✅ You are now the highest bidder!");
     } catch (err) {
       console.error("❌ Failed to place bid:", err.message);
-      alert("Bid failed. Check console for details.");
+      alert("Bid failed. Try again.");
     }
   };
 
@@ -141,6 +199,7 @@ export default function Live() {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-black text-white px-4">
+      <Toaster position="top-right" />
       <h1 className="text-2xl font-bold mb-4">📺 Livestream Viewer</h1>
 
       <div
@@ -178,6 +237,11 @@ export default function Live() {
             </div>
           </div>
         )}
+      </div>
+
+      <div className="mt-8 w-full max-w-md">
+        <h2 className="text-xl font-semibold mb-2">💬 Live Chat</h2>
+        <ChatBox streamId="testStream" />
       </div>
 
       {showCheckoutPrompt && (

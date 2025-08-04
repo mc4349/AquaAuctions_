@@ -15,7 +15,7 @@ import AgoraRTC from "agora-rtc-sdk-ng";
 
 const APP_ID = "659ca74bd1ef43f8bd76eee364741b32";
 const CHANNEL = "aquaauctions";
-const TOKEN = null; // replace with generated token if you have one
+const TOKEN = null; // use a generated token if needed
 
 export default function StreamPage() {
   const { user, logout } = useAuth();
@@ -26,153 +26,141 @@ export default function StreamPage() {
   const [auctionTime, setAuctionTime] = useState("30");
   const [productQueue, setProductQueue] = useState([]);
   const clientRef = useRef(null);
-  const localTracksRef = useRef({});
+  const localTrackRef = useRef(null);
 
-  const startAgoraStream = async () => {
-    try {
-      const client = AgoraRTC.createClient({ mode: "live", codec: "vp8" });
-      clientRef.current = client;
+  const startStream = async () => {
+    const client = AgoraRTC.createClient({ mode: "live", codec: "vp8" });
+    clientRef.current = client;
 
-      await client.setClientRole("host");
-      await client.join(APP_ID, CHANNEL, TOKEN || null, user?.uid || null);
+    await client.join(APP_ID, CHANNEL, TOKEN, user.uid);
 
-      const [videoTrack, audioTrack] = await AgoraRTC.createMicrophoneAndCameraTracks();
-      localTracksRef.current = { videoTrack, audioTrack };
+    const [microphoneTrack, cameraTrack] = await AgoraRTC.createMicrophoneAndCameraTracks();
 
-      videoTrack.play(videoRef.current);
-      await client.publish([videoTrack, audioTrack]);
+    localTrackRef.current = cameraTrack;
 
-      setIsStreaming(true);
-    } catch (error) {
-      console.error("Agora stream error:", error);
+    cameraTrack.play(videoRef.current);
+    await client.publish([microphoneTrack, cameraTrack]);
+
+    setIsStreaming(true);
+
+    // Save initial stream data to Firestore
+    const streamDocRef = doc(db, "Livestreams", "testStream");
+    await setDoc(streamDocRef, {
+      streamerId: user.uid,
+      streamerName: user.displayName,
+      isLive: true,
+      startedAt: new Date(),
+      productQueue: [],
+    });
+  };
+
+  const stopStream = async () => {
+    if (localTrackRef.current) {
+      localTrackRef.current.stop();
+      localTrackRef.current.close();
     }
+
+    if (clientRef.current) {
+      await clientRef.current.leave();
+    }
+
+    setIsStreaming(false);
+
+    await updateDoc(doc(db, "Livestreams", "testStream"), {
+      isLive: false,
+      endedAt: new Date(),
+    });
   };
 
   const addProductToQueue = async () => {
-    if (!productTitle || !productPrice || isNaN(parseFloat(productPrice))) {
-      alert("Enter valid product title and price.");
-      return;
-    }
-
-    const newProduct = {
+    const product = {
       title: productTitle,
       price: parseFloat(productPrice),
-      addedAt: Date.now(),
-      isActive: false,
+      duration: parseInt(auctionTime),
+      addedAt: new Date(),
     };
 
-    const streamRef = doc(db, "Livestreams", "testStream");
-    await setDoc(streamRef, { products: arrayUnion(newProduct) }, { merge: true });
+    setProductQueue((prev) => [...prev, product]);
 
-    setProductQueue((prev) => [...prev, newProduct]);
-    setProductTitle("");
-    setProductPrice("");
-  };
-
-  const startAuction = async (product) => {
-    const endsAt = Date.now() + parseInt(auctionTime) * 1000;
-
-    const streamRef = doc(db, "Livestreams", "testStream");
-    const streamSnap = await getDoc(streamRef);
-    const products = streamSnap.data()?.products || [];
-
-    const updatedProducts = products.map((p) => {
-      if (p.addedAt === product.addedAt) {
-        return {
-          ...p,
-          isActive: true,
-          highestBid: null,
-          highestBidder: null,
-          endsAt,
-        };
-      }
-      return { ...p, isActive: false };
+    const streamDocRef = doc(db, "Livestreams", "testStream");
+    await updateDoc(streamDocRef, {
+      productQueue: arrayUnion(product),
     });
 
-    await updateDoc(streamRef, { products: updatedProducts });
+    setProductTitle("");
+    setProductPrice("");
+    setAuctionTime("30");
   };
 
   return (
-    <div className="flex flex-col items-center min-h-screen bg-white text-black px-4 py-8">
-      <h1 className="text-2xl font-bold mb-4">📡 Go Live with Agora</h1>
+    <div className="p-6 bg-black text-white min-h-screen">
+      <h1 className="text-2xl font-bold mb-4">🎥 Stream Live Auction</h1>
 
-      <div
-        ref={videoRef}
-        id="agora-player"
-        className="w-full max-w-md h-64 bg-black rounded-lg"
-      ></div>
+      <div className="mb-4">
+        <video
+          ref={videoRef}
+          autoPlay
+          playsInline
+          muted
+          style={{ width: "100%", maxWidth: "800px", borderRadius: "12px" }}
+        />
+      </div>
 
       {!isStreaming ? (
         <button
-          onClick={startAgoraStream}
-          className="mt-4 px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+          className="px-6 py-3 bg-green-600 rounded-md hover:bg-green-700"
+          onClick={startStream}
         >
           Go Live
         </button>
       ) : (
-        <p className="mt-4 text-green-600 font-semibold">✅ You are live now!</p>
+        <button
+          className="px-6 py-3 bg-red-600 rounded-md hover:bg-red-700"
+          onClick={stopStream}
+        >
+          End Stream
+        </button>
       )}
 
-      {/* Auction Form */}
-      <div className="w-full max-w-md bg-gray-100 mt-6 p-4 rounded shadow">
-        <h2 className="text-lg font-bold mb-2">➕ Add Product to Auction</h2>
-        <input
-          type="text"
-          value={productTitle}
-          onChange={(e) => setProductTitle(e.target.value)}
-          placeholder="Title"
-          className="w-full mb-2 p-2 rounded border"
-        />
-        <input
-          type="number"
-          value={productPrice}
-          onChange={(e) => setProductPrice(e.target.value)}
-          placeholder="Starting Price"
-          className="w-full mb-2 p-2 rounded border"
-        />
-        <select
-          value={auctionTime}
-          onChange={(e) => setAuctionTime(e.target.value)}
-          className="w-full mb-2 p-2 rounded border"
-        >
-          <option value="30">30s</option>
-          <option value="60">1 min</option>
-          <option value="120">2 min</option>
-        </select>
-        <button
-          onClick={addProductToQueue}
-          className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
-        >
-          Add to Queue
-        </button>
-      </div>
-
-      {/* Product Queue */}
-      {productQueue.length > 0 && (
-        <div className="w-full max-w-md bg-gray-200 mt-4 p-4 rounded shadow">
-          <h3 className="font-semibold mb-2">📦 Products in Queue</h3>
-          {productQueue.map((product) => (
-            <div key={product.addedAt} className="border-b py-2">
-              <p><strong>{product.title}</strong> – ${product.price.toFixed(2)}</p>
-              <button
-                onClick={() => startAuction(product)}
-                className="mt-1 text-sm text-white bg-green-600 px-2 py-1 rounded hover:bg-green-700"
-              >
-                Start Auction
-              </button>
-            </div>
-          ))}
+      {isStreaming && (
+        <div className="mt-6 space-y-4">
+          <h2 className="text-xl font-semibold">Add Product to Auction Queue</h2>
+          <input
+            type="text"
+            placeholder="Product Title"
+            value={productTitle}
+            onChange={(e) => setProductTitle(e.target.value)}
+            className="w-full p-2 rounded text-black"
+          />
+          <input
+            type="number"
+            placeholder="Starting Price"
+            value={productPrice}
+            onChange={(e) => setProductPrice(e.target.value)}
+            className="w-full p-2 rounded text-black"
+          />
+          <select
+            value={auctionTime}
+            onChange={(e) => setAuctionTime(e.target.value)}
+            className="w-full p-2 rounded text-black"
+          >
+            <option value="30">30 seconds</option>
+            <option value="60">1 minute</option>
+            <option value="120">2 minutes</option>
+          </select>
+          <button
+            onClick={addProductToQueue}
+            className="bg-blue-600 px-4 py-2 rounded hover:bg-blue-700"
+          >
+            Add to Queue
+          </button>
         </div>
       )}
 
-      <ChatBox />
-
-      <button
-        onClick={logout}
-        className="mt-8 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
-      >
-        Logout
-      </button>
+      <div className="mt-6">
+        <h2 className="text-xl font-semibold mb-2">Chat</h2>
+        <ChatBox streamId="testStream" />
+      </div>
     </div>
   );
 }

@@ -1,30 +1,42 @@
 // src/pages/order-history.js
+
 import { useEffect, useState } from "react";
-import { db } from "@/lib/firebase";
-import { collection, query, where, getDocs } from "firebase/firestore";
 import { useAuth } from "@/components/AuthProvider";
-import { format } from "date-fns";
+import { db } from "@/lib/firebase";
+import {
+  collection,
+  query,
+  where,
+  getDocs,
+  orderBy,
+} from "firebase/firestore";
+import { useRouter } from "next/router";
+import Link from "next/link";
 
 export default function OrderHistory() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
+  const router = useRouter();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchOrders = async () => {
-      if (!user?.email) return;
+    if (!user?.email) return;
 
+    const fetchOrders = async () => {
       try {
         const q = query(
           collection(db, "Orders"),
-          where("buyer", "==", user.email)
+          where("buyer", "==", user.email),
+          orderBy("createdAt", "desc")
         );
+
         const querySnapshot = await getDocs(q);
         const results = querySnapshot.docs.map((doc) => ({
           id: doc.id,
           ...doc.data(),
         }));
-        setOrders(results.sort((a, b) => b.createdAt - a.createdAt));
+
+        setOrders(results);
       } catch (err) {
         console.error("Failed to fetch orders:", err);
       } finally {
@@ -35,53 +47,59 @@ export default function OrderHistory() {
     fetchOrders();
   }, [user]);
 
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <p className="text-lg">You must be logged in to view order history.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-black text-white p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">📦 Your Order History</h1>
-        <button
-          onClick={logout}
-          className="px-4 py-2 bg-red-600 rounded hover:bg-red-700"
-        >
-          Logout
-        </button>
-      </div>
+      <h1 className="text-3xl font-bold mb-6">🧾 Your Order History</h1>
 
       {loading ? (
-        <p>Loading...</p>
+        <p className="text-gray-400">Loading orders...</p>
       ) : orders.length === 0 ? (
-        <p className="text-gray-400">No past orders found.</p>
+        <p className="text-gray-400">No orders found.</p>
       ) : (
-        <div className="space-y-6">
+        <ul className="space-y-4">
           {orders.map((order) => (
-            <div
+            <li
               key={order.id}
-              className="bg-gray-800 p-4 rounded shadow-md space-y-2"
+              className="bg-gray-800 p-4 rounded-lg shadow text-sm"
             >
-              <p className="text-sm text-gray-400">
-                Ordered on {format(order.createdAt, "PPPpp")}
-              </p>
-              <p className="text-lg font-semibold">🛍️ {order.product?.title}</p>
-              <p>💰 Price: ${order.product?.highestBid || order.product?.price}</p>
-              {order.product?.image && (
-                <img
-                  src={order.product.image}
-                  alt={order.product.title}
-                  className="w-full max-w-xs rounded border mt-2"
-                />
-              )}
-              <p>📍 Ship To: {order.shippingAddress}</p>
-              <p>💳 Payment: {order.cardUsed}</p>
+              <div className="mb-1">
+                <span className="font-semibold">📦 {order.product.title}</span>
+              </div>
+              <p>💰 Total: ${order.product.highestBid || order.product.price}</p>
+              <p>📍 Shipped to: {order.shippingAddress}</p>
               <p>
-                🚚 Tracking Number:{" "}
-                {order.trackingNumber || (
-                  <span className="text-yellow-400">Not yet provided</span>
-                )}
+                🕒 Ordered on:{" "}
+                {new Date(order.createdAt).toLocaleString("en-US", {
+                  dateStyle: "medium",
+                  timeStyle: "short",
+                })}
               </p>
-            </div>
+              <p>💳 Card used: {order.cardUsed}</p>
+            </li>
           ))}
-        </div>
+        </ul>
       )}
+
+      <div className="mt-10 flex flex-col sm:flex-row items-center gap-4">
+        <button
+          onClick={() => router.push("/account")}
+          className="px-4 py-2 bg-blue-600 rounded hover:bg-blue-700"
+        >
+          ← Back to Account
+        </button>
+
+        <Link href="/order-history" className="text-sm text-blue-400 underline">
+          View My Orders
+        </Link>
+      </div>
     </div>
   );
 }
