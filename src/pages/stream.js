@@ -2,9 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
-import ChatBox from "@/components/ChatBox"; // ✅ Add this
+import ChatBox from "@/components/ChatBox"; // ✅ Chat component
 
-const INGEST_URL = "rtmps://aedbe23c3ab7.global-contribute.live-video.net:443/app/";
+const INGEST_ENDPOINT = "aedbe23c3ab7.global-contribute.live-video.net"; // ✅ No rtmps://
 const STREAM_KEY = "sk_us-east-1_ck3aG5T2xaHQ_mqqDhx1ucn1a2ifZ2fFolEshQYmOjt";
 
 export default function StreamPage() {
@@ -14,14 +14,21 @@ export default function StreamPage() {
   const [isStreaming, setIsStreaming] = useState(false);
 
   useEffect(() => {
+    // Access camera and microphone
     async function startCamera() {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: true,
-        audio: true,
-      });
-      mediaStreamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: true,
+        });
+        mediaStreamRef.current = stream;
+
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
+      } catch (err) {
+        console.error("❌ Failed to access camera/mic:", err);
+        alert("Please allow access to camera and microphone.");
       }
     }
 
@@ -47,17 +54,29 @@ export default function StreamPage() {
 
   const initBroadcaster = () => {
     const { IVSBroadcastClient } = window;
+
+    if (!mediaStreamRef.current) {
+      console.error("❌ No media stream available.");
+      return;
+    }
+
     const client = IVSBroadcastClient.create({
       streamConfig: IVSBroadcastClient.BASIC_LANDSCAPE,
-      ingestEndpoint: INGEST_URL,
+      ingestEndpoint: INGEST_ENDPOINT,
     });
 
-    const stream = mediaStreamRef.current;
-    client.addVideoInputDevice(stream);
-    client.addAudioInputDevice(stream);
+    try {
+      client.addVideoInputDevice(mediaStreamRef.current, "camera");
+      client.addAudioInputDevice(mediaStreamRef.current, "mic");
 
-    client.startBroadcast(STREAM_KEY);
-    setIsStreaming(true);
+      client.startBroadcast(STREAM_KEY).then(() => {
+        console.log("✅ Broadcast started");
+        setIsStreaming(true);
+      });
+    } catch (err) {
+      console.error("❌ Failed to start broadcast:", err);
+      alert("Failed to start livestream. Check console for details.");
+    }
   };
 
   return (
@@ -80,10 +99,10 @@ export default function StreamPage() {
           Go Live
         </button>
       ) : (
-        <p className="mt-4 text-green-600 font-semibold">You are live now!</p>
+        <p className="mt-4 text-green-600 font-semibold">✅ You are live now!</p>
       )}
 
-      <ChatBox /> {/* ✅ Chat component */}
+      <ChatBox />
 
       <button
         onClick={logout}
