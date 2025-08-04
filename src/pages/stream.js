@@ -13,7 +13,7 @@ import ChatBox from "@/components/ChatBox";
 
 const APP_ID = "659ca74bd1ef43f8bd76eee364741b32";
 const CHANNEL = "aquaauctions";
-const TOKEN = null;
+const TOKEN = "007eJxTYJh6c6vZQ7nSJUu3s0b0v/fMFrkn4y2+6K7ffdsuln1ldQsUGMxMLZMTzU2SUgxT00yM0yySUszNUlNTjc1MzE0Mk4yNsn9OyGgIZGSwlWFiYWSAQBCfh8GxsDTRsTS5JDM/r5iBAQBeuSIP"; // temporary token
 
 export default function StreamPage() {
   const { user, logout } = useAuth();
