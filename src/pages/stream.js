@@ -11,78 +11,41 @@ import {
   arrayUnion,
 } from "firebase/firestore";
 import ChatBox from "@/components/ChatBox";
+import AgoraRTC from "agora-rtc-sdk-ng";
 
-const INGEST_URL = "rtmps://aedbe23c3ab7.global-contribute.live-video.net:443/app/";
-const STREAM_KEY = "sk_us-east-1_ck3aG5T2xaHQ_mqqDhx1ucn1a2ifZ2fFolEshQYmOjt";
+const APP_ID = "659ca74bd1ef43f8bd76eee364741b32";
+const CHANNEL = "aquaauctions";
+const TOKEN = null; // replace with generated token if you have one
 
 export default function StreamPage() {
   const { user, logout } = useAuth();
   const videoRef = useRef(null);
-  const mediaStreamRef = useRef(null);
   const [isStreaming, setIsStreaming] = useState(false);
-
   const [productTitle, setProductTitle] = useState("");
   const [productPrice, setProductPrice] = useState("");
   const [auctionTime, setAuctionTime] = useState("30");
   const [productQueue, setProductQueue] = useState([]);
+  const clientRef = useRef(null);
+  const localTracksRef = useRef({});
 
-  useEffect(() => {
-    async function startCameraAndInit() {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: true,
-          audio: true,
-        });
-        mediaStreamRef.current = stream;
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-        }
+  const startAgoraStream = async () => {
+    try {
+      const client = AgoraRTC.createClient({ mode: "live", codec: "vp8" });
+      clientRef.current = client;
 
-        const loadScriptAndStart = () => {
-          if (!window.IVSBroadcastClient) {
-            const script = document.createElement("script");
-            script.src = "https://web-broadcast.live-video.net/1.6.0/amazon-ivs-web-broadcast.js";
-            script.onload = () => initBroadcaster(stream);
-            document.body.appendChild(script);
-          } else {
-            initBroadcaster(stream);
-          }
-        };
+      await client.setClientRole("host");
+      await client.join(APP_ID, CHANNEL, TOKEN || null, user?.uid || null);
 
-        loadScriptAndStart();
-      } catch (err) {
-        console.error("Failed to access camera/mic:", err);
-      }
+      const [videoTrack, audioTrack] = await AgoraRTC.createMicrophoneAndCameraTracks();
+      localTracksRef.current = { videoTrack, audioTrack };
+
+      videoTrack.play(videoRef.current);
+      await client.publish([videoTrack, audioTrack]);
+
+      setIsStreaming(true);
+    } catch (error) {
+      console.error("Agora stream error:", error);
     }
-
-    startCameraAndInit();
-
-    return () => {
-      if (mediaStreamRef.current) {
-        mediaStreamRef.current.getTracks().forEach((track) => track.stop());
-      }
-    };
-  }, []);
-
-  const initBroadcaster = (stream) => {
-    const { IVSBroadcastClient } = window;
-    const client = IVSBroadcastClient.create({
-      streamConfig: IVSBroadcastClient.BASIC_LANDSCAPE,
-      ingestEndpoint: INGEST_URL,
-    });
-
-    if (!stream) {
-      console.error("No media stream found");
-      return;
-    }
-
-    console.log("Adding devices to broadcast client...");
-    client.addVideoInputDevice(stream, "iPad Camera");
-    client.addAudioInputDevice(stream, "iPad Mic");
-
-    console.log("Starting broadcast...");
-    client.startBroadcast(STREAM_KEY);
-    setIsStreaming(true);
   };
 
   const addProductToQueue = async () => {
@@ -99,7 +62,6 @@ export default function StreamPage() {
     };
 
     const streamRef = doc(db, "Livestreams", "testStream");
-
     await setDoc(streamRef, { products: arrayUnion(newProduct) }, { merge: true });
 
     setProductQueue((prev) => [...prev, newProduct]);
@@ -132,22 +94,26 @@ export default function StreamPage() {
 
   return (
     <div className="flex flex-col items-center min-h-screen bg-white text-black px-4 py-8">
-      <h1 className="text-2xl font-bold mb-4">📡 Go Live and Manage Auctions</h1>
+      <h1 className="text-2xl font-bold mb-4">📡 Go Live with Agora</h1>
 
-      <video
+      <div
         ref={videoRef}
-        autoPlay
-        muted
-        playsInline
-        className="w-full max-w-md rounded-lg shadow"
-      />
+        id="agora-player"
+        className="w-full max-w-md h-64 bg-black rounded-lg"
+      ></div>
 
       {!isStreaming ? (
-        <p className="mt-4 text-yellow-500">🔄 Connecting to livestream...</p>
+        <button
+          onClick={startAgoraStream}
+          className="mt-4 px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+        >
+          Go Live
+        </button>
       ) : (
         <p className="mt-4 text-green-600 font-semibold">✅ You are live now!</p>
       )}
 
+      {/* Auction Form */}
       <div className="w-full max-w-md bg-gray-100 mt-6 p-4 rounded shadow">
         <h2 className="text-lg font-bold mb-2">➕ Add Product to Auction</h2>
         <input
@@ -181,6 +147,7 @@ export default function StreamPage() {
         </button>
       </div>
 
+      {/* Product Queue */}
       {productQueue.length > 0 && (
         <div className="w-full max-w-md bg-gray-200 mt-4 p-4 rounded shadow">
           <h3 className="font-semibold mb-2">📦 Products in Queue</h3>
