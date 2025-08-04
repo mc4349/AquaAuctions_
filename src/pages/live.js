@@ -1,9 +1,16 @@
 // src/pages/live.js
-// temp change to trigger github
+
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { db } from "@/lib/firebase";
-import { doc, onSnapshot, updateDoc, addDoc, collection } from "firebase/firestore";
+import {
+  doc,
+  onSnapshot,
+  updateDoc,
+  addDoc,
+  collection,
+  getDoc,
+} from "firebase/firestore";
 
 const PLAYBACK_URL =
   "https://aedbe23c3ab7.us-east-1.playback.live-video.net/api/video/v1/us-east-1.991046441176.channel.vwzbgNVljgch.m3u8";
@@ -108,17 +115,16 @@ export default function Live() {
 
     try {
       const streamRef = doc(db, "Livestreams", "testStream");
-      const updatedProducts = (prev) =>
-        prev.map((p) =>
-          p.addedAt === activeProduct.addedAt
-            ? { ...p, highestBid: bid, highestBidder: user?.email || "Anonymous" }
-            : p
-        );
+      const streamSnap = await getDoc(streamRef);
+      const products = streamSnap.data().products;
 
-      await updateDoc(streamRef, {
-        products: updatedProducts,
-      });
+      const updatedProducts = products.map((p) =>
+        p.addedAt === activeProduct.addedAt
+          ? { ...p, highestBid: bid, highestBidder: user?.email || "Anonymous" }
+          : p
+      );
 
+      await updateDoc(streamRef, { products: updatedProducts });
       setBidAmount("");
     } catch (err) {
       console.error("❌ Failed to place bid:", err.message);
@@ -199,10 +205,15 @@ export default function Live() {
         <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
           <div className="bg-white text-black p-6 rounded shadow-lg max-w-sm w-full space-y-4">
             <h2 className="text-xl font-bold">Auction Ended</h2>
-            <p>You won <strong>{activeProduct?.title}</strong> for ${activeProduct?.highestBid || activeProduct?.price}</p>
+            <p>
+              You won <strong>{activeProduct?.title}</strong> for $
+              {activeProduct?.highestBid || activeProduct?.price}
+            </p>
 
             <div>
-              <label className="block text-sm font-medium mb-1">Shipping Address</label>
+              <label className="block text-sm font-medium mb-1">
+                Shipping Address
+              </label>
               <input
                 type="text"
                 value={address}
