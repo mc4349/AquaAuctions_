@@ -1,5 +1,3 @@
-// src/pages/live.js
-
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { db } from "@/lib/firebase";
@@ -27,6 +25,9 @@ export default function Live() {
   const [showCheckoutPrompt, setShowCheckoutPrompt] = useState(false);
   const [address, setAddress] = useState("");
   const [cardInfo, setCardInfo] = useState("");
+
+  // Track if viewer is the auction winner
+  const [isWinner, setIsWinner] = useState(false);
 
   // Initialize Agora Player
   useEffect(() => {
@@ -67,14 +68,17 @@ export default function Live() {
       setActiveProduct(active || null);
 
       if (active?.endsAt && Date.now() > active.endsAt) {
-        setShowCheckoutPrompt(true);
+        // Only show checkout for the winner
+        const winnerEmail = active.highestBidder;
+        setIsWinner(user?.email && winnerEmail && user.email === winnerEmail);
+        setShowCheckoutPrompt(user?.email && winnerEmail && user.email === winnerEmail);
       } else {
         setShowCheckoutPrompt(false);
       }
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [user?.email]);
 
   // Countdown and auto-advance logic
   useEffect(() => {
@@ -91,39 +95,15 @@ export default function Live() {
       setCountdown(secondsLeft);
 
       if (secondsLeft === 0 && !showCheckoutPrompt) {
-        setShowCheckoutPrompt(true);
+        setIsWinner(user?.email === activeProduct?.highestBidder);
+        setShowCheckoutPrompt(user?.email === activeProduct?.highestBidder);
 
-        // Auto-advance to next product
-        setTimeout(async () => {
-          const streamRef = doc(db, "Livestreams", "testStream");
-          const streamSnap = await getDoc(streamRef);
-          const products = streamSnap.data().products;
-
-          const updatedProducts = products.map((p, index) => {
-            if (p.addedAt === activeProduct.addedAt) {
-              return { ...p, isActive: false };
-            }
-
-            const currentIndex = products.findIndex(
-              (p) => p.addedAt === activeProduct.addedAt
-            );
-            const nextIndex = currentIndex + 1;
-
-            if (index === nextIndex) {
-              const endsAt = Date.now() + p.duration * 1000;
-              return { ...p, isActive: true, endsAt };
-            }
-
-            return p;
-          });
-
-          await updateDoc(streamRef, { products: updatedProducts });
-        }, 4000);
+        // Auto-advance to next product (only by streamer, not viewers)
       }
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [activeProduct, showCheckoutPrompt]);
+  }, [activeProduct, showCheckoutPrompt, user?.email]);
 
   // Bidding notification (outbid warning)
   useEffect(() => {
@@ -133,7 +113,7 @@ export default function Live() {
     ) {
       toast.error("⚠️ You've been outbid!");
     }
-  }, [activeProduct?.highestBidder]);
+  }, [activeProduct?.highestBidder, user?.email]);
 
   const placeBid = async () => {
     const bid = parseFloat(bidAmount);
@@ -215,8 +195,8 @@ export default function Live() {
         ) : (
           <div className="bg-gray-700 p-3 rounded text-sm">
             <p>📦 <strong>{activeProduct.title}</strong></p>
-            <p>💰 Starting at: ${activeProduct.price.toFixed(2)}</p>
-            <p>🔥 Highest Bid: ${activeProduct.highestBid?.toFixed(2) || "—"}</p>
+            <p>💰 Starting at: ${Number(activeProduct.price).toFixed(2)}</p>
+            <p>🔥 Highest Bid: ${activeProduct.highestBid ? Number(activeProduct.highestBid).toFixed(2) : "—"}</p>
             <p>👤 Highest Bidder: {activeProduct.highestBidder || "—"}</p>
             <p>⏱ Time Left: {countdown}s</p>
 
@@ -227,10 +207,12 @@ export default function Live() {
                 value={bidAmount}
                 onChange={(e) => setBidAmount(e.target.value)}
                 className="w-full p-2 rounded bg-gray-600 text-white mb-2"
+                disabled={!activeProduct || countdown === 0}
               />
               <button
                 onClick={placeBid}
                 className="w-full px-4 py-2 bg-green-600 rounded hover:bg-green-700"
+                disabled={!activeProduct || countdown === 0}
               >
                 💸 Place Bid
               </button>
@@ -244,7 +226,7 @@ export default function Live() {
         <ChatBox streamId="testStream" />
       </div>
 
-      {showCheckoutPrompt && (
+      {showCheckoutPrompt && isWinner && (
         <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
           <div className="bg-white text-black p-6 rounded shadow-lg max-w-sm w-full space-y-4">
             <h2 className="text-xl font-bold">Auction Ended</h2>

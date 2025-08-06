@@ -1,13 +1,18 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-  darkMode: "class", // Enables class-based dark mode
   content: [
-    "./pages/**/*.{js,ts,jsx,tsx}",      // ✅ Root-level pages folder
-    "./src/**/*.{js,ts,jsx,tsx}",        // ✅ Your components & styles are inside src
-    "./public/**/*.svg"                 // (optional) if using SVG components
+    "./pages/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/**/*.{js,ts,jsx,tsx,mdx}",
+    "./components/**/*.{js,ts,jsx,tsx,mdx}",
+    "./app/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   theme: {
-    extend: {},
+    extend: {
+      colors: {
+        background: "var(--background)",
+        foreground: "var(--foreground)",
+      },
+    },
   },
   plugins: [],
 };
