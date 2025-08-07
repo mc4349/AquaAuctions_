@@ -11,7 +11,6 @@ import {
   orderBy,
 } from "firebase/firestore";
 import { useRouter } from "next/router";
-import Link from "next/link";
 
 export default function OrderHistory() {
   const { user } = useAuth();
@@ -88,17 +87,13 @@ export default function OrderHistory() {
         </ul>
       )}
 
-      <div className="mt-10 flex flex-col sm:flex-row items-center gap-4">
+      <div className="mt-10 flex justify-center">
         <button
-          onClick={() => router.push("/account")}
+          onClick={() => router.back()}
           className="px-4 py-2 bg-blue-600 rounded hover:bg-blue-700"
         >
-          ← Back to Account
+          ← Back
         </button>
-
-        <Link href="/order-history" className="text-sm text-blue-400 underline">
-          View My Orders
-        </Link>
       </div>
     </div>
   );
