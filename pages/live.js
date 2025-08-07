@@ -1,3 +1,5 @@
+// pages/live.js
+
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { db } from "@/lib/firebase";
@@ -25,16 +27,12 @@ export default function Live() {
   const [showCheckoutPrompt, setShowCheckoutPrompt] = useState(false);
   const [address, setAddress] = useState("");
   const [cardInfo, setCardInfo] = useState("");
-
-  // Track if viewer is the auction winner
   const [isWinner, setIsWinner] = useState(false);
 
-  // Initialize Agora Player
   useEffect(() => {
     const initAgoraPlayer = async () => {
       if (typeof window === "undefined") return;
       const AgoraRTC = (await import("agora-rtc-sdk-ng")).default;
-
       const client = AgoraRTC.createClient({ mode: "live", codec: "vp8" });
       await client.setClientRole("audience");
       await client.join(APP_ID, CHANNEL, TOKEN || null, null);
@@ -57,18 +55,14 @@ export default function Live() {
     initAgoraPlayer();
   }, []);
 
-  // Listen for product updates
   useEffect(() => {
     const streamRef = doc(db, "Livestreams", "testStream");
     const unsubscribe = onSnapshot(streamRef, (snapshot) => {
       const data = snapshot.data();
       if (!data?.products) return;
-
       const active = data.products.find((p) => p.isActive);
       setActiveProduct(active || null);
-
       if (active?.endsAt && Date.now() > active.endsAt) {
-        // Only show checkout for the winner
         const winnerEmail = active.highestBidder;
         setIsWinner(user?.email && winnerEmail && user.email === winnerEmail);
         setShowCheckoutPrompt(user?.email && winnerEmail && user.email === winnerEmail);
@@ -80,37 +74,26 @@ export default function Live() {
     return () => unsubscribe();
   }, [user?.email]);
 
-  // Countdown and auto-advance logic
   useEffect(() => {
     if (!activeProduct?.endsAt) {
       setCountdown(0);
       return;
     }
 
-    const interval = setInterval(async () => {
-      const secondsLeft = Math.max(
-        0,
-        Math.floor((activeProduct.endsAt - Date.now()) / 1000)
-      );
+    const interval = setInterval(() => {
+      const secondsLeft = Math.max(0, Math.floor((activeProduct.endsAt - Date.now()) / 1000));
       setCountdown(secondsLeft);
-
       if (secondsLeft === 0 && !showCheckoutPrompt) {
         setIsWinner(user?.email === activeProduct?.highestBidder);
         setShowCheckoutPrompt(user?.email === activeProduct?.highestBidder);
-
-        // Auto-advance to next product (only by streamer, not viewers)
       }
     }, 1000);
 
     return () => clearInterval(interval);
   }, [activeProduct, showCheckoutPrompt, user?.email]);
 
-  // Bidding notification (outbid warning)
   useEffect(() => {
-    if (
-      activeProduct?.highestBidder &&
-      activeProduct?.highestBidder !== (user?.email || "Anonymous")
-    ) {
+    if (activeProduct?.highestBidder && activeProduct?.highestBidder !== (user?.email || "Anonymous")) {
       toast.error("⚠️ You've been outbid!");
     }
   }, [activeProduct?.highestBidder, user?.email]);
@@ -121,28 +104,20 @@ export default function Live() {
       alert("Enter a valid bid amount.");
       return;
     }
-
     const currentBid = activeProduct.highestBid || activeProduct.price;
     if (bid <= currentBid) {
       alert("Bid must be higher than the current highest bid.");
       return;
     }
-
     try {
       const streamRef = doc(db, "Livestreams", "testStream");
       const streamSnap = await getDoc(streamRef);
       const products = streamSnap.data().products;
-
       const updatedProducts = products.map((p) =>
         p.addedAt === activeProduct.addedAt
-          ? {
-              ...p,
-              highestBid: bid,
-              highestBidder: user?.email || "Anonymous",
-            }
+          ? { ...p, highestBid: bid, highestBidder: user?.email || "Anonymous" }
           : p
       );
-
       await updateDoc(streamRef, { products: updatedProducts });
       setBidAmount("");
       toast.success("✅ You are now the highest bidder!");
@@ -157,7 +132,6 @@ export default function Live() {
       alert("Please fill out all fields.");
       return;
     }
-
     try {
       await addDoc(collection(db, "Orders"), {
         product: activeProduct,
@@ -178,52 +152,61 @@ export default function Live() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-black text-white px-4">
+    <div className="min-h-screen bg-black text-white px-4 py-6">
       <Toaster position="top-right" />
-      <h1 className="text-2xl font-bold mb-4">📺 Livestream Viewer</h1>
+      <div className="max-w-6xl mx-auto grid lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2">
+          <div className="bg-gray-900 rounded-lg p-4 shadow">
+            <div
+              ref={videoRef}
+              className="w-full h-64 md:h-[400px] bg-black rounded-lg mb-4"
+            ></div>
 
-      <div
-        ref={videoRef}
-        className="w-full max-w-xl h-64 bg-black rounded-lg shadow mb-4"
-      ></div>
-
-      <div className="bg-gray-800 p-4 mt-6 rounded w-full max-w-md">
-        <h2 className="text-lg font-semibold mb-2">🛍️ Current Auction</h2>
-
-        {!activeProduct ? (
-          <p className="text-gray-400">No product live right now.</p>
-        ) : (
-          <div className="bg-gray-700 p-3 rounded text-sm">
-            <p>📦 <strong>{activeProduct.title}</strong></p>
-            <p>💰 Starting at: ${Number(activeProduct.price).toFixed(2)}</p>
-            <p>🔥 Highest Bid: ${activeProduct.highestBid ? Number(activeProduct.highestBid).toFixed(2) : "—"}</p>
-            <p>👤 Highest Bidder: {activeProduct.highestBidder || "—"}</p>
-            <p>⏱ Time Left: {countdown}s</p>
-
-            <div className="mt-3">
-              <input
-                type="number"
-                placeholder="Your Bid"
-                value={bidAmount}
-                onChange={(e) => setBidAmount(e.target.value)}
-                className="w-full p-2 rounded bg-gray-600 text-white mb-2"
-                disabled={!activeProduct || countdown === 0}
-              />
+            <div className="flex justify-between items-center mb-2">
+              <h2 className="text-xl font-semibold">🔴 Live Auction</h2>
               <button
-                onClick={placeBid}
-                className="w-full px-4 py-2 bg-green-600 rounded hover:bg-green-700"
-                disabled={!activeProduct || countdown === 0}
+                onClick={logout}
+                className="px-4 py-2 bg-red-600 rounded hover:bg-red-700"
               >
-                💸 Place Bid
+                Logout
               </button>
             </div>
-          </div>
-        )}
-      </div>
 
-      <div className="mt-8 w-full max-w-md">
-        <h2 className="text-xl font-semibold mb-2">💬 Live Chat</h2>
-        <ChatBox streamId="testStream" />
+            {activeProduct ? (
+              <div className="space-y-2">
+                <h3 className="text-lg font-bold">{activeProduct.title}</h3>
+                <p>💰 Starting at: ${Number(activeProduct.price).toFixed(2)}</p>
+                <p>🔥 Highest Bid: ${activeProduct.highestBid ? Number(activeProduct.highestBid).toFixed(2) : "—"}</p>
+                <p>👤 Highest Bidder: {activeProduct.highestBidder || "—"}</p>
+                <p>⏱ Time Left: {countdown}s</p>
+                <div className="flex gap-2 mt-2">
+                  <input
+                    type="number"
+                    placeholder="Your Bid"
+                    value={bidAmount}
+                    onChange={(e) => setBidAmount(e.target.value)}
+                    className="p-2 rounded bg-gray-700 w-full"
+                    disabled={countdown === 0}
+                  />
+                  <button
+                    onClick={placeBid}
+                    className="bg-green-600 px-4 py-2 rounded hover:bg-green-700"
+                    disabled={countdown === 0}
+                  >
+                    💸 Place Bid
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <p className="text-gray-400">No product live right now.</p>
+            )}
+          </div>
+        </div>
+
+        <div className="bg-gray-900 rounded-lg p-4 shadow h-fit">
+          <h2 className="text-xl font-semibold mb-3">💬 Live Chat</h2>
+          <ChatBox streamId="testStream" />
+        </div>
       </div>
 
       {showCheckoutPrompt && isWinner && (
@@ -235,29 +218,20 @@ export default function Live() {
               {activeProduct?.highestBid || activeProduct?.price}
             </p>
 
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Shipping Address
-              </label>
-              <input
-                type="text"
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                className="w-full border rounded p-2"
-                placeholder="123 Coral Reef Lane"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1">Card Info</label>
-              <input
-                type="text"
-                value={cardInfo}
-                onChange={(e) => setCardInfo(e.target.value)}
-                className="w-full border rounded p-2"
-                placeholder="**** **** **** 1234"
-              />
-            </div>
+            <input
+              type="text"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              className="w-full border rounded p-2"
+              placeholder="Shipping Address"
+            />
+            <input
+              type="text"
+              value={cardInfo}
+              onChange={(e) => setCardInfo(e.target.value)}
+              className="w-full border rounded p-2"
+              placeholder="Card Info"
+            />
 
             <button
               onClick={handleConfirmPayment}
@@ -275,13 +249,6 @@ export default function Live() {
           </div>
         </div>
       )}
-
-      <button
-        onClick={logout}
-        className="mt-10 px-4 py-2 bg-red-500 rounded hover:bg-red-600"
-      >
-        Logout
-      </button>
     </div>
   );
 }
