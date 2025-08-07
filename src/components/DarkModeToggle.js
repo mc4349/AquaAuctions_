@@ -1,4 +1,4 @@
-// src/components/DarkModeToggle.js
+﻿// src/components/DarkModeToggle.js
 
 import { useEffect, useState } from "react";
 
@@ -23,7 +23,7 @@ export default function DarkModeToggle() {
       onClick={toggle}
       className="text-sm hover:text-yellow-400 transition"
     >
-      {enabled ? "🌙 Dark" : "☀️ Light"}
+      {enabled ? "ðŸŒ™ Dark" : "â˜€ï¸ Light"}
     </button>
   );
 }

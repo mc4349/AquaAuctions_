@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+﻿import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { db } from "@/lib/firebase";
 import {
@@ -74,7 +74,7 @@ export default function StreamerDashboard() {
       await client.publish([cameraTrack, microphoneTrack]);
 
       setIsStreaming(true);
-      toast.success("🔴 You're now LIVE!");
+      toast.success("ðŸ”´ You're now LIVE!");
     } catch (error) {
       console.error("Failed to start stream:", error);
       toast.error("Failed to start stream");
@@ -176,7 +176,7 @@ export default function StreamerDashboard() {
 
       <div className="max-w-6xl mx-auto">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold">🎥 Streamer Dashboard</h1>
+          <h1 className="text-3xl font-bold">ðŸŽ¥ Streamer Dashboard</h1>
           <button
             onClick={logout}
             className="px-4 py-2 bg-red-500 rounded hover:bg-red-600"
@@ -188,7 +188,7 @@ export default function StreamerDashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* STREAMING SECTION */}
           <div className="bg-gray-800 p-6 rounded-lg">
-            <h2 className="text-xl font-semibold mb-4">📹 Live Stream</h2>
+            <h2 className="text-xl font-semibold mb-4">ðŸ“¹ Live Stream</h2>
 
             <div
               ref={videoRef}
@@ -201,28 +201,28 @@ export default function StreamerDashboard() {
                   onClick={startStream}
                   className="px-6 py-2 bg-red-600 rounded hover:bg-red-700"
                 >
-                  🔴 Go Live
+                  ðŸ”´ Go Live
                 </button>
               ) : (
                 <button
                   onClick={stopStream}
                   className="px-6 py-2 bg-gray-600 rounded hover:bg-gray-700"
                 >
-                  ⏹️ Stop Stream
+                  â¹ï¸ Stop Stream
                 </button>
               )}
             </div>
 
             {isStreaming && (
               <div className="mt-4 p-3 bg-red-900 rounded">
-                <p className="text-red-200">🔴 LIVE - Viewers can now see you!</p>
+                <p className="text-red-200">ðŸ”´ LIVE - Viewers can now see you!</p>
               </div>
             )}
           </div>
 
           {/* PRODUCT MANAGEMENT */}
           <div className="bg-gray-800 p-6 rounded-lg">
-            <h2 className="text-xl font-semibold mb-4">🛍️ Add Product</h2>
+            <h2 className="text-xl font-semibold mb-4">ðŸ›ï¸ Add Product</h2>
 
             <div className="space-y-4">
               <input
@@ -261,7 +261,7 @@ export default function StreamerDashboard() {
 
         {/* PRODUCT QUEUE */}
         <div className="mt-8 bg-gray-800 p-6 rounded-lg">
-          <h2 className="text-xl font-semibold mb-4">📦 Product Queue</h2>
+          <h2 className="text-xl font-semibold mb-4">ðŸ“¦ Product Queue</h2>
 
           {products.length === 0 ? (
             <p className="text-gray-400">No products in queue</p>

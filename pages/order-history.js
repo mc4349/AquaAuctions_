@@ -1,4 +1,4 @@
-// src/pages/order-history.js
+﻿// src/pages/order-history.js
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
@@ -56,7 +56,7 @@ export default function OrderHistory() {
 
   return (
     <div className="min-h-screen bg-black text-white p-6">
-      <h1 className="text-3xl font-bold mb-6">🧾 Your Order History</h1>
+      <h1 className="text-3xl font-bold mb-6">ðŸ§¾ Your Order History</h1>
 
       {loading ? (
         <p className="text-gray-400">Loading orders...</p>
@@ -70,18 +70,18 @@ export default function OrderHistory() {
               className="bg-gray-800 p-4 rounded-lg shadow text-sm"
             >
               <div className="mb-1">
-                <span className="font-semibold">📦 {order.product.title}</span>
+                <span className="font-semibold">ðŸ“¦ {order.product.title}</span>
               </div>
-              <p>💰 Total: ${order.product.highestBid || order.product.price}</p>
-              <p>📍 Shipped to: {order.shippingAddress}</p>
+              <p>ðŸ’° Total: ${order.product.highestBid || order.product.price}</p>
+              <p>ðŸ“ Shipped to: {order.shippingAddress}</p>
               <p>
-                🕒 Ordered on:{" "}
+                ðŸ•’ Ordered on:{" "}
                 {new Date(order.createdAt).toLocaleString("en-US", {
                   dateStyle: "medium",
                   timeStyle: "short",
                 })}
               </p>
-              <p>💳 Card used: {order.cardUsed}</p>
+              <p>ðŸ’³ Card used: {order.cardUsed}</p>
             </li>
           ))}
         </ul>
@@ -92,7 +92,7 @@ export default function OrderHistory() {
           onClick={() => router.back()}
           className="px-4 py-2 bg-blue-600 rounded hover:bg-blue-700"
         >
-          ← Back
+          â† Back
         </button>
       </div>
     </div>

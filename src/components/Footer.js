@@ -1,4 +1,4 @@
-// src/components/Footer.js
+﻿// src/components/Footer.js
 
 import Link from "next/link";
 

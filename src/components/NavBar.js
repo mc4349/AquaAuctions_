@@ -1,4 +1,4 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import { useRouter } from "next/router";
 import { useAuth } from "./AuthProvider";
 import DarkModeToggle from "./DarkModeToggle";
@@ -24,7 +24,7 @@ export default function NavBar() {
     <nav className="bg-gray-900 text-white w-full shadow-md px-6 py-4">
       <div className="flex justify-between items-center relative">
         <Link href="/" className="text-2xl font-bold hover:text-blue-400">
-          🌊 AquaAuctions
+          ðŸŒŠ AquaAuctions
         </Link>
 
         <div className="sm:hidden">
@@ -33,7 +33,7 @@ export default function NavBar() {
             className="focus:outline-none text-xl"
             aria-label="Toggle navigation"
           >
-            ☰
+            â˜°
           </button>
         </div>
 

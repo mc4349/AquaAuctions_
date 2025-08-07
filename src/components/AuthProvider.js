@@ -1,4 +1,4 @@
-// src/components/AuthProvider.js
+﻿// src/components/AuthProvider.js
 
 import { createContext, useContext, useEffect, useState } from "react";
 import { GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signOut } from "firebase/auth";

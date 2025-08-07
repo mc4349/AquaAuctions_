@@ -1,4 +1,4 @@
-// pages/live.js
+﻿// pages/live.js
 
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
@@ -94,7 +94,7 @@ export default function Live() {
 
   useEffect(() => {
     if (activeProduct?.highestBidder && activeProduct?.highestBidder !== (user?.email || "Anonymous")) {
-      toast.error("⚠️ You've been outbid!");
+      toast.error("âš ï¸ You've been outbid!");
     }
   }, [activeProduct?.highestBidder, user?.email]);
 
@@ -120,9 +120,9 @@ export default function Live() {
       );
       await updateDoc(streamRef, { products: updatedProducts });
       setBidAmount("");
-      toast.success("✅ You are now the highest bidder!");
+      toast.success("âœ… You are now the highest bidder!");
     } catch (err) {
-      console.error("❌ Failed to place bid:", err.message);
+      console.error("âŒ Failed to place bid:", err.message);
       alert("Bid failed. Try again.");
     }
   };
@@ -140,14 +140,14 @@ export default function Live() {
         cardUsed: cardInfo,
         createdAt: Date.now(),
       });
-      alert("✅ Order submitted!");
+      alert("âœ… Order submitted!");
       setShowCheckoutPrompt(false);
       setActiveProduct(null);
       setAddress("");
       setCardInfo("");
     } catch (err) {
       console.error("Order failed", err);
-      alert("❌ Failed to place order");
+      alert("âŒ Failed to place order");
     }
   };
 
@@ -163,7 +163,7 @@ export default function Live() {
             ></div>
 
             <div className="flex justify-between items-center mb-2">
-              <h2 className="text-xl font-semibold">🔴 Live Auction</h2>
+              <h2 className="text-xl font-semibold">ðŸ”´ Live Auction</h2>
               <button
                 onClick={logout}
                 className="px-4 py-2 bg-red-600 rounded hover:bg-red-700"
@@ -175,10 +175,10 @@ export default function Live() {
             {activeProduct ? (
               <div className="space-y-2">
                 <h3 className="text-lg font-bold">{activeProduct.title}</h3>
-                <p>💰 Starting at: ${Number(activeProduct.price).toFixed(2)}</p>
-                <p>🔥 Highest Bid: ${activeProduct.highestBid ? Number(activeProduct.highestBid).toFixed(2) : "—"}</p>
-                <p>👤 Highest Bidder: {activeProduct.highestBidder || "—"}</p>
-                <p>⏱ Time Left: {countdown}s</p>
+                <p>ðŸ’° Starting at: ${Number(activeProduct.price).toFixed(2)}</p>
+                <p>ðŸ”¥ Highest Bid: ${activeProduct.highestBid ? Number(activeProduct.highestBid).toFixed(2) : "â€”"}</p>
+                <p>ðŸ‘¤ Highest Bidder: {activeProduct.highestBidder || "â€”"}</p>
+                <p>â± Time Left: {countdown}s</p>
                 <div className="flex gap-2 mt-2">
                   <input
                     type="number"
@@ -193,7 +193,7 @@ export default function Live() {
                     className="bg-green-600 px-4 py-2 rounded hover:bg-green-700"
                     disabled={countdown === 0}
                   >
-                    💸 Place Bid
+                    ðŸ’¸ Place Bid
                   </button>
                 </div>
               </div>
@@ -204,7 +204,7 @@ export default function Live() {
         </div>
 
         <div className="bg-gray-900 rounded-lg p-4 shadow h-fit">
-          <h2 className="text-xl font-semibold mb-3">💬 Live Chat</h2>
+          <h2 className="text-xl font-semibold mb-3">ðŸ’¬ Live Chat</h2>
           <ChatBox streamId="testStream" />
         </div>
       </div>

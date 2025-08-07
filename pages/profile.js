@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { updateProfile } from "firebase/auth";
 
@@ -31,10 +31,10 @@ export default function ProfilePage() {
         displayName,
         photoURL: preview,
       });
-      setMessage("✅ Profile updated.");
+      setMessage("âœ… Profile updated.");
     } catch (err) {
       console.error("Update failed:", err);
-      setMessage("❌ Failed to update profile.");
+      setMessage("âŒ Failed to update profile.");
     }
   };
 
@@ -48,7 +48,7 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-black text-white p-6 max-w-xl mx-auto">
-      <h1 className="text-3xl font-bold mb-6">👤 Your Profile</h1>
+      <h1 className="text-3xl font-bold mb-6">ðŸ‘¤ Your Profile</h1>
 
       {preview && (
         <img

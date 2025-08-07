@@ -1,4 +1,4 @@
-// src/pages/livehost.js
+﻿// src/pages/livehost.js
 
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
@@ -107,19 +107,19 @@ export default function LiveHost() {
 
     try {
       await setDoc(streamRef, { products: updatedProducts }, { merge: true });
-      alert("✅ Product added as active auction item!");
+      alert("âœ… Product added as active auction item!");
       setTitle("");
       setPrice("");
       setDuration("");
     } catch (err) {
-      console.error("❌ Failed to update Firestore:", err.message);
+      console.error("âŒ Failed to update Firestore:", err.message);
       alert("Failed to add product. Check console.");
     }
   };
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-black text-white px-4">
-      <h1 className="text-2xl font-bold mb-4">🎥 Host Livestream</h1>
+      <h1 className="text-2xl font-bold mb-4">ðŸŽ¥ Host Livestream</h1>
 
       <video
         ref={videoRef}
@@ -130,7 +130,7 @@ export default function LiveHost() {
       />
 
       <div className="bg-gray-800 p-4 mt-6 rounded w-full max-w-md">
-        <h2 className="text-lg font-semibold mb-2">🛍️ Add Product to Auction</h2>
+        <h2 className="text-lg font-semibold mb-2">ðŸ›ï¸ Add Product to Auction</h2>
 
         <label htmlFor="product-title" className="block mb-1">
           Product Title
@@ -175,7 +175,7 @@ export default function LiveHost() {
           onClick={addProductToStream}
           className="w-full px-4 py-2 bg-blue-600 rounded hover:bg-blue-700"
         >
-          ➕ Add Product
+          âž• Add Product
         </button>
       </div>
 

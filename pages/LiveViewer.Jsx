@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+﻿import React, { useEffect, useRef } from 'react';
 import { create, isPlayerSupported } from 'amazon-ivs-player';
 
 const LiveViewer = () => {
@@ -23,7 +23,7 @@ const LiveViewer = () => {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-black text-white">
-      <h1 className="text-xl font-semibold mb-4">📺 Livestream Viewer</h1>
+      <h1 className="text-xl font-semibold mb-4">ðŸ“º Livestream Viewer</h1>
       <video
         ref={videoRef}
         controls

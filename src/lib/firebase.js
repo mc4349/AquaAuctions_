@@ -1,4 +1,4 @@
-// src/lib/firebase.js
+﻿// src/lib/firebase.js
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 

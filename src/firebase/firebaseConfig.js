@@ -1,4 +1,4 @@
-// src/firebase/firebaseConfig.js
+﻿// src/firebase/firebaseConfig.js
 const firebaseConfig = {
   apiKey: "AIzaSyBg-XBGVOD2jvhsggbHGZdoAmduGhAbL28",
   authDomain: "aquaauctions-cf6d0.firebaseapp.com",
