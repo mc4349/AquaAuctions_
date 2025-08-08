@@ -9,12 +9,10 @@ import {
   setDoc,
 } from "firebase/firestore";
 import { toast, Toaster } from "react-hot-toast";
+import ChatBox from "@/components/ChatBox";
 
-const APP_ID = "659ca74bd1ef43f8bd76eee364741b32";
-const CHANNEL = "aquaauctions";
-const TOKEN = null;
-
-export default function StreamerDashboard() {
+// Accept streamId as prop, default to "testStream"
+export default function Dashboard({ streamId = "testStream" }) {
   const { user, logout } = useAuth();
   const videoRef = useRef(null);
   const [isStreaming, setIsStreaming] = useState(false);
@@ -22,11 +20,11 @@ export default function StreamerDashboard() {
   const [products, setProducts] = useState([]);
   const [activeProduct, setActiveProduct] = useState(null);
 
-  // New product form
+  // Product form
   const [newProduct, setNewProduct] = useState({
     title: "",
     price: "",
-    duration: 60, // seconds
+    duration: 60,
     seller: user?.email || "Unknown",
   });
 
@@ -35,18 +33,16 @@ export default function StreamerDashboard() {
     const initAgoraClient = async () => {
       if (typeof window === "undefined") return;
       const AgoraRTC = (await import("agora-rtc-sdk-ng")).default;
-
       const agoraClient = AgoraRTC.createClient({ mode: "live", codec: "vp8" });
-      await agoraClient.setClientRole("host"); // HOST = broadcaster
+      await agoraClient.setClientRole("host");
       setClient(agoraClient);
     };
-
     initAgoraClient();
   }, []);
 
-  // Listen for product updates
+  // Listen for product updates on this streamId
   useEffect(() => {
-    const streamRef = doc(db, "Livestreams", "testStream");
+    const streamRef = doc(db, "Livestreams", streamId);
     const unsubscribe = onSnapshot(streamRef, (snapshot) => {
       const data = snapshot.data();
       if (data?.products) {
@@ -54,37 +50,33 @@ export default function StreamerDashboard() {
         setActiveProduct(data.products.find((p) => p.isActive) || null);
       }
     });
-
     return () => unsubscribe();
-  }, []);
+  }, [streamId]);
 
-  // Start streaming
+  // Start/stop stream
   const startStream = async () => {
     if (!client) return;
-
     try {
+      const APP_ID = "659ca74bd1ef43f8bd76eee364741b32";
+      const CHANNEL = streamId;
+      const TOKEN = null;
       await client.join(APP_ID, CHANNEL, TOKEN || null, null);
-
       const [cameraTrack, microphoneTrack] = await Promise.all([
         (await import("agora-rtc-sdk-ng")).default.createCameraVideoTrack(),
         (await import("agora-rtc-sdk-ng")).default.createMicrophoneAudioTrack(),
       ]);
-
       cameraTrack.play(videoRef.current);
       await client.publish([cameraTrack, microphoneTrack]);
-
       setIsStreaming(true);
-      toast.success("ðŸ”´ You're now LIVE!");
+      toast.success("🔴 You're now LIVE!");
     } catch (error) {
       console.error("Failed to start stream:", error);
       toast.error("Failed to start stream");
     }
   };
 
-  // Stop streaming
   const stopStream = async () => {
     if (!client || !isStreaming) return;
-
     try {
       await client.leave();
       setIsStreaming(false);
@@ -95,13 +87,12 @@ export default function StreamerDashboard() {
     }
   };
 
-  // Add new product to auction queue
+  // Product queue management
   const addProduct = async () => {
     if (!newProduct.title || !newProduct.price) {
       alert("Please fill in all fields");
       return;
     }
-
     const product = {
       title: newProduct.title,
       price: parseFloat(newProduct.price),
@@ -112,20 +103,16 @@ export default function StreamerDashboard() {
       highestBidder: null,
       seller: user?.email || "Unknown",
     };
-
     try {
-      const streamRef = doc(db, "Livestreams", "testStream");
+      const streamRef = doc(db, "Livestreams", streamId);
       const streamDoc = await getDoc(streamRef);
-
       const currentProducts = streamDoc.exists() ? streamDoc.data().products || [] : [];
       const updatedProducts = [...currentProducts, product];
-
       if (streamDoc.exists()) {
         await updateDoc(streamRef, { products: updatedProducts });
       } else {
         await setDoc(streamRef, { products: updatedProducts });
       }
-
       setNewProduct({ title: "", price: "", duration: 60, seller: user?.email || "Unknown" });
       toast.success("Product added to queue!");
     } catch (error) {
@@ -134,16 +121,14 @@ export default function StreamerDashboard() {
     }
   };
 
-  // Start auction for a product
   const startAuction = async (product) => {
     try {
-      const streamRef = doc(db, "Livestreams", "testStream");
+      const streamRef = doc(db, "Livestreams", streamId);
       const updatedProducts = products.map((p) => ({
         ...p,
         isActive: p.addedAt === product.addedAt,
         endsAt: p.addedAt === product.addedAt ? Date.now() + product.duration * 1000 : null,
       }));
-
       await updateDoc(streamRef, { products: updatedProducts });
       toast.success(`Started auction for ${product.title}!`);
     } catch (error) {
@@ -152,16 +137,14 @@ export default function StreamerDashboard() {
     }
   };
 
-  // Stop current auction
   const stopAuction = async () => {
     try {
-      const streamRef = doc(db, "Livestreams", "testStream");
+      const streamRef = doc(db, "Livestreams", streamId);
       const updatedProducts = products.map((p) => ({
         ...p,
         isActive: false,
         endsAt: null,
       }));
-
       await updateDoc(streamRef, { products: updatedProducts });
       toast.success("Auction stopped");
     } catch (error) {
@@ -173,10 +156,9 @@ export default function StreamerDashboard() {
   return (
     <div className="min-h-screen bg-gray-900 text-white p-6">
       <Toaster position="top-right" />
-
       <div className="max-w-6xl mx-auto">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold">ðŸŽ¥ Streamer Dashboard</h1>
+          <h1 className="text-3xl font-bold">Dashboard</h1>
           <button
             onClick={logout}
             className="px-4 py-2 bg-red-500 rounded hover:bg-red-600"
@@ -184,46 +166,40 @@ export default function StreamerDashboard() {
             Logout
           </button>
         </div>
-
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* STREAMING SECTION */}
           <div className="bg-gray-800 p-6 rounded-lg">
-            <h2 className="text-xl font-semibold mb-4">ðŸ“¹ Live Stream</h2>
-
+            <h2 className="text-xl font-semibold mb-4">Live Stream</h2>
             <div
               ref={videoRef}
               className="w-full h-64 bg-black rounded-lg mb-4"
             ></div>
-
             <div className="flex gap-4">
               {!isStreaming ? (
                 <button
                   onClick={startStream}
                   className="px-6 py-2 bg-red-600 rounded hover:bg-red-700"
                 >
-                  ðŸ”´ Go Live
+                  Go Live
                 </button>
               ) : (
                 <button
                   onClick={stopStream}
                   className="px-6 py-2 bg-gray-600 rounded hover:bg-gray-700"
                 >
-                  â¹ï¸ Stop Stream
+                  Stop Stream
                 </button>
               )}
             </div>
-
             {isStreaming && (
               <div className="mt-4 p-3 bg-red-900 rounded">
-                <p className="text-red-200">ðŸ”´ LIVE - Viewers can now see you!</p>
+                <p className="text-red-200">LIVE - Viewers can now see you!</p>
               </div>
             )}
           </div>
-
           {/* PRODUCT MANAGEMENT */}
           <div className="bg-gray-800 p-6 rounded-lg">
-            <h2 className="text-xl font-semibold mb-4">ðŸ›ï¸ Add Product</h2>
-
+            <h2 className="text-xl font-semibold mb-4">Add Product</h2>
             <div className="space-y-4">
               <input
                 type="text"
@@ -232,7 +208,6 @@ export default function StreamerDashboard() {
                 onChange={(e) => setNewProduct({ ...newProduct, title: e.target.value })}
                 className="w-full p-3 rounded bg-gray-700 text-white"
               />
-
               <input
                 type="number"
                 placeholder="Starting Price"
@@ -240,7 +215,6 @@ export default function StreamerDashboard() {
                 onChange={(e) => setNewProduct({ ...newProduct, price: e.target.value })}
                 className="w-full p-3 rounded bg-gray-700 text-white"
               />
-
               <input
                 type="number"
                 placeholder="Auction Duration (seconds)"
@@ -248,7 +222,6 @@ export default function StreamerDashboard() {
                 onChange={(e) => setNewProduct({ ...newProduct, duration: e.target.value })}
                 className="w-full p-3 rounded bg-gray-700 text-white"
               />
-
               <button
                 onClick={addProduct}
                 className="w-full px-4 py-2 bg-blue-600 rounded hover:bg-blue-700"
@@ -258,11 +231,9 @@ export default function StreamerDashboard() {
             </div>
           </div>
         </div>
-
         {/* PRODUCT QUEUE */}
         <div className="mt-8 bg-gray-800 p-6 rounded-lg">
-          <h2 className="text-xl font-semibold mb-4">ðŸ“¦ Product Queue</h2>
-
+          <h2 className="text-xl font-semibold mb-4">Product Queue</h2>
           {products.length === 0 ? (
             <p className="text-gray-400">No products in queue</p>
           ) : (
@@ -286,7 +257,6 @@ export default function StreamerDashboard() {
                         </p>
                       )}
                     </div>
-
                     <div className="flex gap-2">
                       {product.isActive ? (
                         <button
@@ -309,6 +279,11 @@ export default function StreamerDashboard() {
               ))}
             </div>
           )}
+        </div>
+        {/* LIVE CHAT */}
+        <div className="mt-8 bg-gray-800 p-6 rounded-lg">
+          <h2 className="text-xl font-semibold mb-4">Live Chat</h2>
+          <ChatBox streamId={streamId} />
         </div>
       </div>
     </div>

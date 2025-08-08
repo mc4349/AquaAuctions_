@@ -1,4 +1,4 @@
-﻿// pages/index.js
+// pages/index.js
 
 import Link from "next/link";
 import { useAuth } from "@/components/AuthProvider";
