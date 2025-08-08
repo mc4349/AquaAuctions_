@@ -1,5 +1,5 @@
 import { useRouter } from "next/router";
-import LiveViewer from "@/components/LiveViewer"; // If you move LiveViewer to src/components, update path to "@/components/LiveViewer"
+import LiveViewer from "@/components/LiveViewer";
 import { useEffect, useState } from "react";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
