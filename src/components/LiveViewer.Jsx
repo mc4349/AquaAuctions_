@@ -1,7 +1,6 @@
 ﻿import React, { useEffect, useRef } from 'react';
 import { create, isPlayerSupported } from 'amazon-ivs-player';
 import ChatBox from './ChatBox';
-import LiveViewer from "@/components/LiveViewer";
 
 const LiveViewer = ({ streamId, playbackUrl }) => {
   const videoRef = useRef(null);
