@@ -1,4 +1,4 @@
-﻿// pages/live.js
+// pages/live.js
 
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";

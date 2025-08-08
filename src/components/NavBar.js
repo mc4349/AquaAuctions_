@@ -1,4 +1,4 @@
-﻿import Link from "next/link";
+import Link from "next/link";
 import { useRouter } from "next/router";
 import { useAuth } from "./AuthProvider";
 import DarkModeToggle from "./DarkModeToggle";

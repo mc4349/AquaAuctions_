@@ -1,4 +1,4 @@
-﻿// src/components/DarkModeToggle.js
+// src/components/DarkModeToggle.js
 
 import { useEffect, useState } from "react";
 

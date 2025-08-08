@@ -1,4 +1,4 @@
-﻿// src/pages/livehost.js
+// src/pages/livehost.js
 
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";

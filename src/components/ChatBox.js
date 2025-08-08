@@ -1,4 +1,4 @@
-﻿// src/components/ChatBox.js
+// src/components/ChatBox.js
 
 import { useEffect, useRef, useState } from "react";
 import {

@@ -1,4 +1,4 @@
-﻿// src/firebase/firebaseClient.js
+// src/firebase/firebaseClient.js
 
 import { initializeApp, getApps } from "firebase/app";
 import { getAuth } from "firebase/auth";

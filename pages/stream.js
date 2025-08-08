@@ -1,4 +1,4 @@
-﻿import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/router";
 import { useAuth } from "@/components/AuthProvider";
 import { db } from "@/lib/firebase";

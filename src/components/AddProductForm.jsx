@@ -1,4 +1,4 @@
-﻿import { useState } from "react";
+import { useState } from "react";
 
 export default function AddProductForm({ onAddProduct }) {
   const [name, setName] = useState("");

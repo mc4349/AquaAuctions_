@@ -1,4 +1,4 @@
-﻿// src/pages/order-history.js
+// src/pages/order-history.js
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
