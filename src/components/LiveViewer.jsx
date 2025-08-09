@@ -1,5 +1,4 @@
 ﻿import React, { useEffect, useRef } from 'react';
-import AgoraRTC from 'agora-rtc-sdk-ng';
 import ChatBox from './ChatBox';
 
 // Agora App ID for your project
@@ -11,28 +10,32 @@ const LiveViewer = ({ streamId }) => {
 
   useEffect(() => {
     if (!streamId) return;
+    if (typeof window === 'undefined') return; // Prevent running on server
 
-    const client = AgoraRTC.createClient({ mode: 'live', codec: 'vp8' });
-    clientRef.current = client;
+    // Dynamically import AgoraRTC so it only loads in the browser
+    import('agora-rtc-sdk-ng').then(({ default: AgoraRTC }) => {
+      const client = AgoraRTC.createClient({ mode: 'live', codec: 'vp8' });
+      clientRef.current = client;
 
-    client.setClientRole('audience');
+      client.setClientRole('audience');
 
-    client
-      .join(APP_ID, streamId, null, null)
-      .then(() => {
-        client.on('user-published', async (user, mediaType) => {
-          await client.subscribe(user, mediaType);
-          if (mediaType === 'video') {
-            user.videoTrack.play(videoRef.current);
-          }
-          if (mediaType === 'audio') {
-            user.audioTrack.play();
-          }
+      client
+        .join(APP_ID, streamId, null, null)
+        .then(() => {
+          client.on('user-published', async (user, mediaType) => {
+            await client.subscribe(user, mediaType);
+            if (mediaType === 'video') {
+              user.videoTrack.play(videoRef.current);
+            }
+            if (mediaType === 'audio') {
+              user.audioTrack.play();
+            }
+          });
+        })
+        .catch((err) => {
+          console.error('Agora join error:', err);
         });
-      })
-      .catch((err) => {
-        console.error('Agora join error:', err);
-      });
+    });
 
     return () => {
       clientRef.current?.leave().catch(() => {});
