@@ -1,35 +1,56 @@
 ﻿import React, { useEffect, useRef } from 'react';
-import { create, isPlayerSupported } from 'amazon-ivs-player';
+import AgoraRTC from 'agora-rtc-sdk-ng';
 import ChatBox from './ChatBox';
 
-const LiveViewer = ({ streamId, playbackUrl }) => {
+// Agora App ID for your project
+const APP_ID = '659ca74bd1ef43f8bd76eee364741b32';
+
+const LiveViewer = ({ streamId }) => {
   const videoRef = useRef(null);
+  const clientRef = useRef(null);
 
   useEffect(() => {
-    if (!playbackUrl) return;
-    if (!isPlayerSupported()) {
-      console.warn('Amazon IVS Player is not supported in this browser.');
-      return;
-    }
-    const player = create();
-    player.attachHTMLVideoElement(videoRef.current);
-    player.load(playbackUrl);
-    player.play();
+    if (!streamId) return;
+
+    const client = AgoraRTC.createClient({ mode: 'live', codec: 'vp8' });
+    clientRef.current = client;
+
+    client.setClientRole('audience');
+
+    client
+      .join(APP_ID, streamId, null, null)
+      .then(() => {
+        client.on('user-published', async (user, mediaType) => {
+          await client.subscribe(user, mediaType);
+          if (mediaType === 'video') {
+            user.videoTrack.play(videoRef.current);
+          }
+          if (mediaType === 'audio') {
+            user.audioTrack.play();
+          }
+        });
+      })
+      .catch((err) => {
+        console.error('Agora join error:', err);
+      });
+
     return () => {
-      player.pause();
-      player.delete();
+      clientRef.current?.leave().catch(() => {});
     };
-  }, [playbackUrl]);
+  }, [streamId]);
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-black text-white">
       <h1 className="text-xl font-semibold mb-4">📺 Livestream Viewer</h1>
-      <video
+      <div
         ref={videoRef}
-        controls
-        autoPlay
-        playsInline
-        style={{ width: '100%', maxWidth: '800px', borderRadius: '10px' }}
+        style={{
+          width: '100%',
+          maxWidth: '800px',
+          borderRadius: '10px',
+          background: '#222',
+          minHeight: '450px'
+        }}
       />
       <div className="w-full max-w-lg mt-8">
         <ChatBox streamId={streamId} />
